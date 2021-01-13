@@ -12,19 +12,26 @@ function createBufferSource(ctx, buffer) {
     return source;
 }
 
-class PianoSequencer {
+class Piano {
     constructor(notes) {
         // load 3 octaves of the given notes
         this.notes = crossProduct(notes, '345');
-        this.input = '';
         this.lowOctave = 'qwertyu';
         this.midOctave = 'asdfghj';
         this.highOctave = 'zxcvbnm';
     }
 
     async init(ctx) {
-        this.ff = await loadNotes(ctx, 'ff', this.notes);
-        this.mf = await loadNotes(ctx, 'mf', this.notes);
+        this.ff = await this.loadNotes(ctx, 'ff', this.notes);
+        this.mf = await this.loadNotes(ctx, 'mf', this.notes);
+    }
+
+    async loadNotes(ctx, volume, notes) {
+        return await Promise.all(notes.map(async (note) => {
+            const path = `samples/piano/${volume}/${note}.mp3`;
+            const buffer = await loadBuffer(ctx, path);
+            return createBufferSource(ctx, buffer);
+        }));
     }
 
     parseLine(line) {
@@ -51,9 +58,8 @@ class PianoSequencer {
     }
 }
 
-class BeatSequencer {
+class Beats {
     cosntructor() {
-        this.input = '';
     }
 
     async init(ctx) {
@@ -72,37 +78,20 @@ class BeatSequencer {
 }
 
 class Sequencer {
-    constructor(piano, beats) {
-        this.piano = piano;
-        this.beats = beats;
-        this.pianoSequences = [];
-        this.beatsSequences = [];
+    constructor(instrument) {
+        this.instrument = instrument;
+        this.sequences = [];
         this.idx = 0;
     }
 
-    toBase64() {
-        const json = JSON.stringify({
-            piano: this.piano.input,
-            beats: this.beats.input,
-        });
-        return btoa(json);
-    }
-
-    buildSequence(instrument, input) {
-        instrument.input = input;
-        return input.split('\n').map(line => instrument.parseLine(line));
-    }
-
     length() {
-        return this.pianoSequences.map(a => a.length)
-            .concat(this.beatsSequences.map(a => a.length))
+        return this.sequences.map(a => a.length)
             .reduce((a, b) => Math.max(a, b), 0);
     }
 
-    play() {
+    step() {
         const length = this.length();
         if (length === 0) {
-            console.log('empty');
             return;
         }
 
@@ -110,29 +99,16 @@ class Sequencer {
             this.idx = 0;
         }
 
-        this.pianoSequences.map(a => a[this.idx])
-            .concat(this.beatsSequences.map(a => a[this.idx]))
+        this.sequences.map(a => a[this.idx])
             .filter(maybeBuf => !!maybeBuf)
-            .forEach(buf => cloneBuf(buf).start());
+            .forEach(buf => createBufferSource(buf.context, buf.buffer).start());
         this.idx++;
     }
 
-    updatePiano(input) {
-        this.pianoSequences = this.buildSequence(this.piano, input);
-        console.log(this.pianoSequences);
+    update(input) {
+        this.sequences = input.split('\n')
+            .map(line => this.instrument.parseLine(line));
     }
-
-    updateBeats(input) {
-        this.beatsSequences = this.buildSequence(this.beats, input);
-        console.log(this.beatsSequences);
-    }
-}
-
-async function loadNotes(ctx, volume, notes) {
-    return await Promise.all(notes.map(async (note) => {
-        const buffer = await loadBuffer(ctx, `samples/piano/${volume}/${note}.mp3`);
-        return createBufferSource(ctx, buffer);
-    }));
 }
 
 async function loadBeats(ctx, letters) {
@@ -143,35 +119,36 @@ async function loadBeats(ctx, letters) {
     }));
 }
 
-function setupSequencer(piano, beats) {
-    const sequencer = new Sequencer(piano, beats);
-    const pianoTextbox = document.getElementById('piano');
-    const beatsTextbox = document.getElementById('beats');
-    if (window.location.hash.length > 0) {
-        const base64 = window.location.hash.slice(1);
-        try {
-            const json = JSON.parse(atob(base64));
-            pianoTextbox.value = json.piano;
-            beatsTextbox.value = json.beats;
-        } catch(e) {
-            console.log(`invalid sequence ${base64}: ${e}`);
-        }
-    }
-    sequencer.updatePiano(pianoTextbox.value);
-    sequencer.updateBeats(beatsTextbox.value);
-    pianoTextbox.addEventListener('input', e => {
-        sequencer.updatePiano(e.target.value);
-        window.location.hash = sequencer.toBase64();
-    });
-    beatsTextbox.addEventListener('input', e => {
-        sequencer.updateBeats(e.target.value);
-        window.location.hash = sequencer.toBase64();
+function setupSequencer(instrument, name) {
+    const sequencer = new Sequencer(instrument);
+    const textbox = document.getElementById(name);
+    sequencer.update(textbox.value);
+    textbox.addEventListener('input', e => {
+        sequencer.update(e.target.value);
+        setHash();
     });
     return sequencer;
 }
 
-function cloneBuf(note) {
-    return createBufferSource(note.context, note.buffer);
+function setHash() {
+    const state = JSON.stringify({
+        piano: document.getElementById('piano').value,
+        beats: document.getElementById('beats').value,
+    });
+    window.location.hash = btoa(state);
+}
+
+function loadHash() {
+    if (window.location.hash.length > 0) {
+        const base64 = window.location.hash.slice(1);
+        try {
+            const json = JSON.parse(atob(base64));
+            document.getElementById('piano').value = json.piano;
+            document.getElementById('beats').value = json.beats;
+        } catch(e) {
+            console.log(`invalid sequence ${base64}: ${e}`);
+        }
+    }
 }
 
 function crossProduct(a, b) {
@@ -179,16 +156,20 @@ function crossProduct(a, b) {
 }
 
 window.addEventListener('load', async () => {
+    loadHash();
     const ctx = new AudioContext();
-    const piano = new PianoSequencer('CDEFGAB');
-    const beats = new BeatSequencer();
-    console.log('loading...');
+    const piano = new Piano('CDEFGAB');
+    const beats = new Beats();
     await piano.init(ctx);
     await beats.init(ctx);
-    console.log('done');
-    const sequencer = setupSequencer(piano, beats);
+    document.getElementById('status').remove();
+    const pianoSequencer = setupSequencer(piano, 'piano');
+    const beatsSequencer = setupSequencer(beats, 'beats');
 
-    const bpm = 120;
+    const bpm = 240;
     const msPerBeat = (1 / bpm) * 60 * 1000;
-    setInterval(() => sequencer.play(), msPerBeat);
+    setInterval(() => {
+        pianoSequencer.step();
+        beatsSequencer.step();
+    }, msPerBeat);
 });
