@@ -1,14 +1,46 @@
 <html>
 <head>
+<meta charset="UTF-8">
+<title>musicbox</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
 <script src='musicbox.js'></script>
 <style>
 textarea {
-    width: 200px;
     height: 300px;
+    font-family: monospace;
+}
+
+.sequencers {
+    display: flex;
+    flex-direction: row;
+}
+
+.sequencer {
+    display: flex;
+    flex-direction: column;
+    width: 200px;
+    margin: 10px;
+}
+
+p {
+    font-size: small;
 }
 </style>
 </head>
-<span id='status'>loading samples...</span><br>
-<textarea id='beats'></textarea>
-<textarea id='piano'></textarea>
+<span id='status'>loading samples...</span>
+<div class='sequencers'>
+    <div class='sequencer'>
+        <span>beats</span>
+        <textarea id='beats'></textarea>
+        <p>Each letter corresponds to a different sample. Non-letters are
+        silent.</p>
+    </div>
+    <div class='sequencer'>
+        <span>piano</span>
+        <textarea id='piano'></textarea>
+        <p>On a QWERTY keyboard, letters on each row represent notes C through
+        B, with lower rows representing higher octaves. Capital letters are
+        louder, non-letters are silent.</p>
+    </div>
+</div>
 </html>
