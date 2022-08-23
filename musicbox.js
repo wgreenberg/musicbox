@@ -8,7 +8,7 @@ async function loadBuffer(ctx, path) {
 function createBufferSource(ctx, buffer) {
     let source = ctx.createBufferSource();
     source.buffer = buffer;
-    source.connect(ctx.destination);
+    source.connect(ctx.compressor);
     return source;
 }
 
@@ -158,6 +158,15 @@ function crossProduct(a, b) {
 window.addEventListener('load', async () => {
     loadHash();
     const ctx = new AudioContext();
+    const compressor = new DynamicsCompressorNode(ctx, {
+        threshold: -50,
+        knee: 40,
+        ratio: 12,
+        attack: 0,
+        release: 0.25,
+    });
+    compressor.connect(ctx.destination);
+    ctx.compressor = compressor;
     const piano = new Piano('CDEFGAB');
     const beats = new Beats();
     await piano.init(ctx);
@@ -166,10 +175,18 @@ window.addEventListener('load', async () => {
     const pianoSequencer = setupSequencer(piano, 'piano');
     const beatsSequencer = setupSequencer(beats, 'beats');
 
+    let stopped = true;
+
+    document.getElementById('play').addEventListener('click', () => {
+        stopped = !stopped;
+    });
+
     const bpm = 240;
     const msPerBeat = (1 / bpm) * 60 * 1000;
     setInterval(() => {
-        pianoSequencer.step();
-        beatsSequencer.step();
+        if (!stopped) {
+            pianoSequencer.step();
+            beatsSequencer.step();
+        }
     }, msPerBeat);
 });
