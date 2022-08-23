@@ -171,7 +171,7 @@ window.addEventListener('load', async () => {
     const beats = new Beats();
     await piano.init(ctx);
     await beats.init(ctx);
-    document.getElementById('status').remove();
+    document.getElementById('play').innerText = 'play/pause';
     const pianoSequencer = setupSequencer(piano, 'piano');
     const beatsSequencer = setupSequencer(beats, 'beats');
 

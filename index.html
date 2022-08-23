@@ -22,26 +22,37 @@ textarea {
     margin: 10px;
 }
 
+.body {
+    display: flex;
+    flex-direction: column;
+}
+
+button {
+    width: 150px;
+    margin: 10px;
+}
+
 p {
     font-size: small;
 }
 </style>
 </head>
-<span id='status'>loading samples...</span>
-<div class='sequencers'>
-    <div class='sequencer'>
-        <span>beats</span>
-        <textarea id='beats'></textarea>
-        <p>Each letter corresponds to a different sample. Non-letters are
-        silent.</p>
+<div class="body">
+    <div class='sequencers'>
+        <div class='sequencer'>
+            <span>beats</span>
+            <textarea id='beats'></textarea>
+            <p>Each letter corresponds to a different sample. Non-letters are
+            silent.</p>
+        </div>
+        <div class='sequencer'>
+            <span>piano</span>
+            <textarea id='piano'></textarea>
+            <p>On a QWERTY keyboard, the first 7 letters on each row represent
+            notes C through B, with lower rows representing higher octaves. Capital
+            letters are louder, non-letters are silent.</p>
+        </div>
     </div>
-    <div class='sequencer'>
-        <span>piano</span>
-        <textarea id='piano'></textarea>
-        <p>On a QWERTY keyboard, the first 7 letters on each row represent
-        notes C through B, with lower rows representing higher octaves. Capital
-        letters are louder, non-letters are silent.</p>
-    </div>
+    <button id="play">loading...</button>
 </div>
-<button id="play">Play/Stop</button>
 </html>
