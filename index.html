@@ -5,23 +5,6 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
 <script src='musicbox.js'></script>
 <style>
-textarea {
-    height: 300px;
-    font-family: monospace;
-}
-
-.sequencers {
-    display: flex;
-    flex-direction: row;
-}
-
-.sequencer {
-    display: flex;
-    flex-direction: column;
-    width: 200px;
-    margin: 10px;
-}
-
 .body {
     display: flex;
     flex-direction: column;
@@ -34,6 +17,52 @@ button {
 
 p {
     font-size: small;
+    margin-top: 0px;
+}
+
+textarea {
+    height: 150px;
+    flex: 1;
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+}
+
+.sequencers {
+    display: flex;
+    flex-direction: column;
+}
+
+.sequencer-main {
+    display: flex;
+    flex-direction: row;
+    font-family: monospace;
+}
+
+.sequencer {
+    display: flex;
+    flex-direction: column;
+    width: 400px;
+}
+
+.sequencer-preview {
+    flex: 1;
+    background-color: #d0cfcf;
+    border-radius: 6px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    border: none;
+    margin-bottom: 6px;
+    padding: 10px;
+    white-space: pre;
+}
+
+.sequencer-preview > p {
+    margin: 0px;
+}
+
+.active {
+    background-color: #9b9b9b;
+    text-decoration: underline;
 }
 </style>
 </head>
@@ -41,18 +70,25 @@ p {
     <div class='sequencers'>
         <div class='sequencer'>
             <span>beats</span>
-            <textarea id='beats'></textarea>
+            <div class="sequencer-main">
+                <textarea id='beats'></textarea>
+                <div class="sequencer-preview" id="beats-preview"></div>
+            </div>
             <p>Each letter corresponds to a different sample. Non-letters are
             silent.</p>
         </div>
         <div class='sequencer'>
             <span>piano</span>
-            <textarea id='piano'></textarea>
+            <div class="sequencer-main">
+                <textarea id='piano'></textarea>
+                <div class="sequencer-preview" id="piano-preview"></div>
+            </div>
             <p>On a QWERTY keyboard, the first 7 letters on each row represent
             notes C through B, with lower rows representing higher octaves. Capital
             letters are louder, non-letters are silent.</p>
         </div>
     </div>
     <button id="play">loading...</button>
+    <span><input type="checkbox" id="sync-sequences">sync rows</span>
 </div>
 </html>

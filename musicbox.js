@@ -81,6 +81,7 @@ class Sequencer {
     constructor(instrument) {
         this.instrument = instrument;
         this.sequences = [];
+        this.input = "";
         this.idx = 0;
     }
 
@@ -89,25 +90,53 @@ class Sequencer {
             .reduce((a, b) => Math.max(a, b), 0);
     }
 
-    step() {
-        const length = this.length();
-        if (length === 0) {
+    step(syncSequences) {
+        const longestLength = this.length();
+        if (longestLength === 0) {
             return;
         }
 
-        if (this.idx >= length) {
-            this.idx = 0;
-        }
-
-        this.sequences.map(a => a[this.idx])
+        this.sequences.map(a => {
+                let idx;
+                if (syncSequences) {
+                    idx = this.idx % longestLength;
+                } else {
+                    idx = this.idx % a.length;
+                }
+                return a[idx];
+            })
             .filter(maybeBuf => !!maybeBuf)
             .forEach(buf => createBufferSource(buf.context, buf.buffer).start());
         this.idx++;
     }
 
     update(input) {
+        this.input = input;
         this.sequences = input.split('\n')
             .map(line => this.instrument.parseLine(line));
+    }
+
+    render(syncSequences) {
+        const longestLength = this.length();
+        return this.input.split('\n')
+            .map(line => Array.from(line).map((letter, i) => {
+                let idx;
+                if (syncSequences) {
+                    idx = this.idx % longestLength;
+                } else {
+                    idx = this.idx % line.length;
+                }
+                let classes = [];
+                if (i === idx) {
+                    classes.push('active');
+                }
+                if (letter === ' ') {
+                    letter = '·';
+                }
+                return `<span class=${classes.join('')}>${letter}</span>`
+            }).join(''))
+            .map(line => `<p class="line">${line}</p>`)
+            .join('');
     }
 }
 
@@ -134,6 +163,7 @@ function setHash() {
     const state = JSON.stringify({
         piano: document.getElementById('piano').value,
         beats: document.getElementById('beats').value,
+        syncSequences: document.getElementById('sync-sequences').checked,
     });
     window.location.hash = btoa(state);
 }
@@ -145,6 +175,7 @@ function loadHash() {
             const json = JSON.parse(atob(base64));
             document.getElementById('piano').value = json.piano;
             document.getElementById('beats').value = json.beats;
+            document.getElementById('sync-sequences').checked = json.syncSequences;
         } catch(e) {
             console.log(`invalid sequence ${base64}: ${e}`);
         }
@@ -153,6 +184,14 @@ function loadHash() {
 
 function crossProduct(a, b) {
     return Array.from(b).flatMap(a_i => Array.from(a).map(b_i => b_i + a_i));
+}
+
+function updatePreview(name, sequencer, syncSequences) {
+    let preview = document.getElementById(name);
+    let rendered = sequencer.render(syncSequences);
+    if (preview.innerHTML !== rendered) {
+        preview.innerHTML = rendered;
+    }
 }
 
 window.addEventListener('load', async () => {
@@ -174,19 +213,28 @@ window.addEventListener('load', async () => {
     document.getElementById('play').innerText = 'play/pause';
     const pianoSequencer = setupSequencer(piano, 'piano');
     const beatsSequencer = setupSequencer(beats, 'beats');
+    updatePreview('piano-preview', pianoSequencer);
+    let syncSequences = document.getElementById('sync-sequences').checked;
+    updatePreview('beats-preview', beatsSequencer, syncSequences);
 
     let stopped = true;
 
     document.getElementById('play').addEventListener('click', () => {
         stopped = !stopped;
     });
+    document.getElementById('sync-sequences').addEventListener('click', (e) => {
+        syncSequences = e.target.checked;
+        setHash();
+    });
 
     const bpm = 240;
     const msPerBeat = (1 / bpm) * 60 * 1000;
     setInterval(() => {
         if (!stopped) {
-            pianoSequencer.step();
-            beatsSequencer.step();
+            pianoSequencer.step(syncSequences);
+            beatsSequencer.step(syncSequences);
+            updatePreview('piano-preview', pianoSequencer, syncSequences);
+            updatePreview('beats-preview', beatsSequencer, syncSequences);
         }
     }, msPerBeat);
 });
